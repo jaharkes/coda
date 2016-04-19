@@ -532,3 +532,9 @@ ViceNewConnection (IN RPC2_Integer SideEffectType,
 		       IN OUT RPC2_BoundedBS VFlagBS,
 		       IN RPC2_CountedBS PiggyCOP2);
 
+65: ViceGetUpdateLog(IN VolumeId Vid,
+		     IN OUT RPC2_Unsigned Sequence,
+		     OUT DirFid Updated[],
+		     OUT RPC2_Unsigned Epoch,
+		     OUT RPC2_Unsigned MaxSequence);
+

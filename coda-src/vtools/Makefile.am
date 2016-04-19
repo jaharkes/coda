@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
 if BUILD_CLIENT
-bin_PROGRAMS = codacon cfs cmon coda_replay hoard spy mkcodabf
+bin_PROGRAMS = codacon cfs cmon coda_replay hoard spy mkcodabf getupdatelog
 dist_man_MANS = cfs.1 cmon.1 coda_replay.1 hoard.1 spy.1 mkcodabf.1
 if HAVE_PYTHON
 bin_SCRIPTS = gcodacon
@@ -49,3 +49,5 @@ spy_LDADD = $(top_builddir)/lib-src/base/libbase.la \
 
 codaconfedit_LDADD = $(top_builddir)/lib-src/base/libbase.la
 
+getupdatelog_LDADD = $(top_builddir)/coda-src/vicedep/libvenusdep.la \
+		     $(RPC2_LIBS)
