@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -123,8 +123,8 @@ typedef struct VnodeDiskObjectStruct {
     Unique_t	  uparent;	/* Parent directory uniquifier */
     bit32	  vnodeMagic;	/* Magic number--mainly for file server
     				   paranoia checks */
-#define	  SMALLVNODEMAGIC	0xda8c041F
-#define	  LARGEVNODEMAGIC	0xad8765fe
+#define	  SMALLVNODEMAGIC	0xda8c0420
+#define	  LARGEVNODEMAGIC	0xad8765ff
     /* Vnode magic can be removed, someday, if we run need the room.  Simply
        have to be sure that the thing we replace can be VNODEMAGIC, rather
        than 0 (in an old file system).  Or go through and zero the fields,
@@ -133,7 +133,6 @@ typedef struct VnodeDiskObjectStruct {
     Date_t	  serverModifyTime;	/* Used only by the server;
 					   for incremental backup purposes */
     struct rec_smolink	  nextvn;	/* link to next vnode with same vnodeindex */
-    rec_dlist	  *log;		/* resolution log in RVM */
     /* Missing:
        archiving/migration
        encryption key
@@ -141,9 +140,9 @@ typedef struct VnodeDiskObjectStruct {
 } VnodeDiskObject;
 
 #if UINT_MAX == ULONG_MAX
-#define SIZEOF_SMALLDISKVNODE	112	/* used to be 64 */
+#define SIZEOF_SMALLDISKVNODE	108	/* used to be 64 */
 #else
-#define SIZEOF_SMALLDISKVNODE	128
+#define SIZEOF_SMALLDISKVNODE	120
 #endif
 #define CHECKSIZE_SMALLVNODE\
 	(sizeof(VnodeDiskObject) == SIZEOF_SMALLDISKVNODE)
@@ -193,7 +192,6 @@ typedef struct Vnode {
 
 #define VAclSize(vnp)		(SIZEOF_LARGEVNODE - SIZEOF_SMALLVNODE)
 #define VAclDiskSize(v)		(SIZEOF_LARGEDISKVNODE - SIZEOF_SMALLDISKVNODE)
-#define VnLog(vnp)		((vnp)->disk.log)
 #define VnSHA(vnp)		((vnp)->SHA)
 
 PDirHandle SetDirHandle(struct Vnode *);

@@ -82,7 +82,6 @@ extern "C" {
 #include <codadir.h>
 #include <camprivate.h>
 #include <coda_globals.h>
-#include <recov_vollog.h>
 #include "volutil.private.h"
 
 Error error;
@@ -108,9 +107,6 @@ long S_VolCreate(RPC2_Handle rpcid, RPC2_String formal_partition,
 	rvm_return_t status = RVM_SUCCESS;    /* transaction status variable */
 	int rc = 0;
 	ProgramType *pt;
-	int resflag = repvol ? RVMRES : 0;
-        int rvmlogsize = 4096; /* when resolution is enabled, default to 4k
-                                  log entries */
 
 	/* To keep C++ 2.0 happy */
 	char *partition = (char *)formal_partition;
@@ -166,8 +162,7 @@ long S_VolCreate(RPC2_Handle rpcid, RPC2_String formal_partition,
 
     /* If we are creating a replicated volume, pass along group id */
 	vp = VCreateVolume(&error, partition, volumeId, parentId, 
-			   repvol ? grpId : 0, readwriteVolume, 
-			   resflag ? rvmlogsize : 0);
+			   repvol ? grpId : 0, readwriteVolume);
 	if (error) {
 		VLog(0, "Unable to create the volume; aborted");
 		rvmlib_abort(VNOVOL);
@@ -295,13 +290,6 @@ static int ViceCreateRoot(Volume *vp)
     CODA_ASSERT(vnode->node.dirNode);
     CODA_ASSERT(vnode->uniquifier == 1);
 
-    /* create the resolution log for this vnode if rvm resolution is
-       turned on */
-    if (AllowResolution && V_RVMResOn(vp)) {
-	VLog(0, "Creating new log for root vnode\n");
-	CreateRootLog(vp, vn);
-	vnode->log = VnLog(vn);
-    }
     /* write out the new vnode */
     if (VolDebugLevel >= 9) {
 	PrintVnode(stdout, vnode, bitNumberToVnodeNumber(0, vLarge));

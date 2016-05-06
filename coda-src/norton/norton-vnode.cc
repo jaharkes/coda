@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -35,7 +35,6 @@ extern "C" {
 #include <volume.h>
 #include <index.h>
 #include <recov.h>
-#include <ops.h>
 #include <camprivate.h>
 #include <coda_globals.h>
 
@@ -96,10 +95,6 @@ void show_vnode(VolumeId volid, Unique_t uniquifier)
 
 	printf("    vnode number: %08x\tvnode index: %u\n", 2*(vnodeindex+1), vnodeindex);
 	PrintVnodeDiskObject(vnode);
-	if (vnode->log) {
-	    printf("\n    Vnode Resolution Log:\n");
-	    PrintLog(vnode->log, stdout);
-	}
     }
 }
 
@@ -127,10 +122,6 @@ void show_vnode(VolumeId volid, VnodeId vnum, Unique_t uniquifier)
 
     printf("    vnode number: %08x\tvnode index: %u\n", vnum, vnodeindex);
     PrintVnodeDiskObject(vnode);
-    if (vnode->log) {
-	printf("\n    Vnode Resolution Log:\n");
-	PrintLog(vnode->log, stdout);
-    }
 }
 
 void show_vnode(int argc, char *argv[])

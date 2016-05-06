@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -86,8 +86,6 @@ struct fsobj *OBJ_GetFree(ViceFid *fid)
 		obj->d_cinode = 0;
 		obj->d_inodemod = 0;
 		obj->d_needsres = 0;
-		obj->d_needslogpurge = 0;
-		obj->d_needslogtrunc = 0;
 		obj->d_reintupdate = 0;
 		obj->d_reintstale = 0;
 	}

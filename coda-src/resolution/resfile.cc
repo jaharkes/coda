@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -71,7 +71,6 @@ extern "C" {
 /* declarations of routines */
 static int IncVVGroup(ViceVersionVector **, int *);
 static void SetResStatus(Vnode *, ResStatus *);
-static void UpdateStats(ViceFid *, fileresstats *);    
 
 /* FILE RESOLUTION 
  *	Look at Version Vectors from all hosts;
@@ -215,7 +214,6 @@ EndFileResolve:
 	errorcode = EINCONS;
     }
     else frstats.file_nsucc++;
-    UpdateStats(Fid, &frstats);
     PROBE(FileresTPinfo, COORDENDFILERES);
     return(errorcode);
 }
@@ -536,25 +534,4 @@ static void SetResStatus(Vnode *vptr, ResStatus *Status)
     Status->Owner = vptr->disk.owner;
     Status->Date = vptr->disk.unixModifyTime;
     Status->Mode = vptr->disk.modeBits;
-}
-
-static void UpdateStats(ViceFid *Fid, fileresstats *frstats)
-{
-    VolumeId vid = Fid->Volume;
-    Volume *volptr = 0;
-
-    if (!XlateVid(&vid)) {
-	SLog(0, "UpdateStats: couldn't Xlate Fid 0x%x\n", vid);
-	return;
-    }
-
-    if (GetVolObj(vid, &volptr, VOL_NO_LOCK, 0, 0)) {
-	SLog(0, "UpdateStats: couldn't get vol obj 0x%x\n", vid);
-    } else {
-	if (AllowResolution && V_RVMResOn(volptr)) 
-	    V_VolLog(volptr)->vmrstats->update(frstats);
-    }
-
-    if (volptr)
-	PutVolObj(&volptr, VOL_NO_LOCK, 0);
 }

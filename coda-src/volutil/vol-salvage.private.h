@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -16,15 +16,10 @@ listed in the file CREDITS.
 
 #*/
 
-
-
-
-
 #define readOnly(vsp)	((vsp)->header.type==ROVOL || (vsp)->header.type == BACKVOL)
 
 #include <rec_dlist.h>
 #include <bitmap.h>
-#include <recov_vollog.h>
 
 struct InodeSummary {		/* Inode summary file: an entry for each volume in a partition */
     VolumeId	volumeId;	/* Volume id */
@@ -42,8 +37,6 @@ struct VolumeSummary {		/* one entry for each volume */
 				    call backs for all the files in this volume when
 				    the volume goes back on line */
     struct  InodeSummary *inSummary; /* this volume's inodes */
-    recov_vol_log *vollog;	// log storage for volume
-    bitmap	*logbm;		// bitmap for checking if volume log has no leaks
 };
 
 struct VnodeEssence {
@@ -61,7 +54,6 @@ struct VnodeEssence {
     Unique_t	uparent;    	/* uniquifier of parent */
     Unique_t  	unique;	    	/* own uniquifier; Must match entry! */
     VnodeId	vid;	    	/* own vnode number */
-    rec_dlist	*log;		// for directories only
 };
 
 struct VnodeInfo {

@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -89,7 +89,6 @@ extern "C" {
 #include <volume.h>
 #include <srv.h>
 
-#include <vmindex.h>
 #include <voltypes.h>
 #include <vicelock.h>
 #include <vlist.h>
@@ -100,8 +99,6 @@ extern "C" {
 #include <operations.h>
 #include <lockqueue.h>
 #include <resutil.h>
-#include <ops.h>
-#include <rsle.h>
 #include <nettohost.h>
 #include <cvnode.h>
 #include <operations.h>
@@ -757,20 +754,6 @@ START_TIMING(SetAttr_Total);
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
 
-    {
-	if (!errorCode && ReplicatedOp) {
-	    SLog(9, "Going to spool store log record %u %o %u %u\n",
-		   Status->Owner, Status->Mode, Status->Author, Status->Date);
-	    if ((errorCode = SpoolVMLogRecord(vlist, v, volptr, StoreId, 
-					     RES_NewStore_OP, STSTORE, 
-					     Status->Owner, Status->Mode,
-					     Status->Author, Status->Date,
-					     Mask, &Status->VV)) )
-		SLog(0, "ViceSetAttr: Error %d during SpoolVMLogRecord\n", 
-		     errorCode);
-	}
-    }
-
 FreeLocks:
     /* Put objects. */
     {
@@ -847,12 +830,6 @@ START_TIMING(SetACL_Total);
 	SetStatus(v->vptr, Status, rights, anyrights);
 	if (ReplicatedOp)
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
-    }
-
-    if (ReplicatedOp && !errorCode) {
-	if ((errorCode = SpoolVMLogRecord(vlist, v, volptr, StoreId, 
-					  RES_NewStore_OP, ACLSTORE, newACL)) )
-	    SLog(0, "ViceSetACL: error %d during SpoolVMLogRecord\n", errorCode);
     }
 
 FreeLocks:
@@ -990,16 +967,6 @@ START_TIMING(Create_Total);
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
 
-    /* Create Log Record */
-    if (ReplicatedOp && !errorCode) 
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					  RES_Create_OP, Name,
-					  Fid->Vnode, Fid->Unique, 
-					  client ? client->Id : 0)))
-	    SLog(0, 
-		 "ViceCreate: Error %d during SpoolVMLogRecord\n",
-		 errorCode);
-
   FreeLocks:
     /* Put objects. */
     {
@@ -1116,15 +1083,6 @@ long FS_ViceVRemove(RPC2_Handle RPCid, ViceFid *Did, RPC2_String Name,
 		SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
 
-    if (ReplicatedOp && !errorCode) {
-	ViceVersionVector ghostVV = cv->vptr->disk.versionvector;	    
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					  RES_Remove_OP, Name, Fid.Vnode, 
-					  Fid.Unique, &ghostVV)))
-	    SLog(0, "ViceRemove: error %d during SpoolVMLogRecord\n",
-		 errorCode);
-    }
-
 FreeLocks:
     /* Put objects. */
     {
@@ -1236,14 +1194,6 @@ START_TIMING(Link_Total);
 	SetStatus(cv->vptr, Status, rights, anyrights);
 	if (ReplicatedOp)
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
-    }
-
-    if (ReplicatedOp && !errorCode) {
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					  RES_Link_OP, (char *)Name,
-					  Fid->Vnode, Fid->Unique, 
-					  &(Vnode_vv(cv->vptr)))))
-	    SLog(0, "ViceLink: Error %d during SpoolVMLogRecord\n", errorCode);
     }
 
 FreeLocks:
@@ -1441,12 +1391,6 @@ START_TIMING(Rename_Total);
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
 
-    /* spool rename log record for recoverable rvm logs */
-    if (ReplicatedOp && !errorCode) 
-        errorCode = SpoolRenameLogRecord(RES_Rename_OP, vlist, sv, tv, spv,
-                                         tpv, volptr, (char *)OldName,
-                                         (char *)NewName, StoreId);
-
 FreeLocks: 
     /* Put objects. */
     {
@@ -1582,26 +1526,6 @@ START_TIMING(MakeDir_Total);
 	if ( errorCode == 0 )
 		CODA_ASSERT(DC_Dirty(cv->vptr->dh));
 
-
-	if (ReplicatedOp && !errorCode) {
-	    if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					      RES_MakeDir_OP, Name, 
-					      NewDid->Vnode, NewDid->Unique, 
-					      client?client->Id:0)) )
-		SLog(0, "ViceMakeDir: Error %d during SpoolVMLogRecord for parent\n", errorCode);
-	    // spool child's log record 
-	    if ( errorCode == 0 )
-		CODA_ASSERT(DC_Dirty(cv->vptr->dh));
-	    if (!errorCode && (errorCode = SpoolVMLogRecord(vlist, cv, volptr,
-							    StoreId, 
-							    RES_MakeDir_OP, ".",
-							    NewDid->Vnode, 
-							    NewDid->Unique,
-							    client?client->Id:0)))
-		SLog(0, "ViceMakeDir: Error %d during SpoolVMLogRecord for child\n", errorCode);
-	}
-    
-
 FreeLocks: 
     /* Put objects. */
     {
@@ -1724,14 +1648,6 @@ START_TIMING(RemoveDir_Total);
 	if (ReplicatedOp)
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
-
-    if (ReplicatedOp) 
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					  RES_RemoveDir_OP, Name, 
-					  ChildDid.Vnode, ChildDid.Unique, 
-					  VnLog(cv->vptr), &(Vnode_vv(cv->vptr).StoreId),
-					  &(Vnode_vv(cv->vptr).StoreId))))
-	    SLog(0, "ViceRemoveDir: error %d in SpoolVMLogRecord\n", errorCode);
 
 FreeLocks: 
     /* Put objects. */
@@ -1874,14 +1790,6 @@ START_TIMING(SymLink_Total);
 	    SetVSStatus(client, volptr, NewVS, VCBStatus);
     }
 
-    /* Create Log Record */
-    if (ReplicatedOp) 
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, StoreId,
-					  RES_SymLink_OP, 
-					  NewName, Fid->Vnode, Fid->Unique,
-					  client?client->Id:0)) )
-	    SLog(0, "ViceSymLink: Error %d in SpoolVMLogRecord\n", errorCode);
-    
 FreeLocks: 
     /* Put objects. */
     {
@@ -4386,8 +4294,6 @@ void PutObjects(int errorCode, Volume *volptr, int LockLevel,
         SLog(10, "PutObjects: Vid = %x, errorCode = %d",
 		volptr ? V_id(volptr) : 0, errorCode);
 
-        vmindex freed_indices;		// for truncating /purging resolution logs 
-
         /* Back out new disk allocation on failure. */
         if (errorCode && volptr)
 	        if (blocks != 0 && AdjustDiskUsage(volptr, -blocks) != 0)
@@ -4460,39 +4366,6 @@ START_TIMING(PutObjects_Transaction);
 			    VN_PutDirHandle(v->vptr);
 			}
 		    }
-		    
-		    if (AllowResolution && volptr && V_RVMResOn(volptr) &&
-			v->vptr->disk.type == vDirectory) {
-			
-			// log mutation into recoverable volume log
-			olist_iterator next(v->rsl);
-			rsle *vmle;
-			while((vmle = (rsle *)next())) {
-			    if (!errorCode) {
-				SLog(9, "PutObjects: Appending recoverable log record");
-				if (SrvDebugLevel > 39) vmle->print();
-				vmle->CommitInRVM(volptr, v->vptr);
-			    }
-			    else 
-				/* free up slot in vm bitmap */
-				vmle->Abort(volptr);
-			}
-
-			// truncate/purge log if necessary and no errors have occured 
-			if (!errorCode) {
-			    if (v->d_needslogpurge) {
-				CODA_ASSERT(v->vptr->delete_me);
-				if (VnLog(v->vptr)) {
-				    PurgeLog(VnLog(v->vptr), volptr, &freed_indices);
-				    VnLog(v->vptr) = NULL;
-				}
-			    }
-			    else if (v->d_needslogtrunc) {
-				CODA_ASSERT(!v->vptr->delete_me);
-				TruncateLog(volptr, v->vptr, &freed_indices);
-			    }
-			}
-		    }
 
 		    /* Vnode. */
 		    {
@@ -4517,12 +4390,6 @@ START_TIMING(PutObjects_Transaction);
 		    v->vptr = 0;
 		}
 	}
-
-	// for logs that have been truncated/purged deallocated entries in vm
-	// bitmap should be done after transaction commits but here we are
-	// asserting if Transaction end status is not success
-	if (errorCode == 0)
-	    FreeVMIndices(volptr, &freed_indices);
 
 	/* Volume Header. */
 	if (!errorCode && UpdateVolume)
@@ -4605,12 +4472,6 @@ START_NSC_TIMING(PutObjects_Inodes);
 			CODA_ASSERT(idec((int) device, (int) v->f_finode, parentId) == 0);
 		    }
 		}
-	    }
-	    if (AllowResolution) {
-		/* clean up spooled log record list */
-		rsle *rs;
-		while ((rs = (rsle *)v->rsl.get()))
-		    delete rs;
 	    }
 	    delete v;
 	}

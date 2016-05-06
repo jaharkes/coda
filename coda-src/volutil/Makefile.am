@@ -12,7 +12,7 @@ libvolutil_la_SOURCES = vol-ancient.cc vol-backup.cc vol-clone.cc \
     vol-create.cc vol-dump.cc vol-dumpvrdb.cc vol-info.cc vol-lock.cc \
     vol-lookup.cc vol-makevldb.cc vol-makevrdb.cc vol-maxid.cc vol-purge.cc \
     vol-restore.cc vol-rvmsize.cc vol-salvage.cc vol-salvage.private.h \
-    vol-setvv.cc vol-setlogparms.cc vol-showvnode.cc vol-timing.cc \
+    vol-setvv.cc vol-showvnode.cc vol-timing.cc \
     vol-tracerpc.cc vol-printstats.cc vol-getvolumelist.cc \
     vol-showcallbacks.cc vol-rvmtrunc.cc readstuff.cc vvlist.cc vvlist.h \
     volutil.private.h dumpstream.cc dumpstream.h dumpstuff.cc dump.h

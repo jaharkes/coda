@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -174,6 +174,7 @@ void *Dir_n_ACL(struct Vnode *vn, int *size);
 
 /* declarations from rescoord.c */
 class res_mgrpent;
-extern long OldDirResolve(res_mgrpent *, ViceFid *, ViceVersionVector **);
+extern long OldDirResolve(res_mgrpent *, ViceFid *, ViceVersionVector **,
+                          ResStatus **, struct DirFid *);
 
 #endif /* _RESUTIL_H_ */

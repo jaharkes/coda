@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2008 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -56,7 +56,6 @@ extern "C" {
 #include <volume.h>
 #include <lockqueue.h>
 
-#include "ops.h"
 #include "rescomm.h"
 #include "resutil.h"
 #include "resforce.h"
@@ -307,12 +306,6 @@ long RS_DoForceDirOps(RPC2_Handle RPCid, ViceFid *Fid,
 	pv->vptr->disk.versionvector = status->VV;
     }
 
-    if (!errorCode) {
-	SLog(9, "RS_DoForceDirOps: Going to spool recoverable log record");
-	if ((errorCode = SpoolVMLogRecord(vlist, pv, volptr, &status->VV.StoreId, ResolveNULL_OP, 0))) 
-	    SLog(0, "RS_DoForceDirOps: Error %d during SpoolVMLogRecord", errorCode);
-    }
-	
   FreeLocks:
     if (fp)
 	fclose(fp);

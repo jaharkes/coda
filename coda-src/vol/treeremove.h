@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -31,9 +31,6 @@ class TreeRmBlk {
     ViceStatus *status;
     ViceStoreId *storeid;
     dlist *vlist;
-    int IsResolve;
-    olist *hvlog;
-    unsigned long srvrid;
     int	*blocks;
 
   TreeRmBlk(){ }
@@ -48,15 +45,6 @@ class TreeRmBlk {
       vlist = vl;
       blocks = blks;
       *blocks = 0;
-      IsResolve = resolve;
-      if (IsResolve) {
-	  hvlog = logtree;
-	  srvrid = svid;
-      }
-      else {
-	  hvlog = NULL;
-	  srvrid = 0;
-      }
   return(0); /* keep C++ happy */
   }
 };

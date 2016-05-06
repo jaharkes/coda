@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -385,7 +385,7 @@ static int WEResPhase2(res_mgrpent *mgrp, ViceFid *Fid,
 /* This function is shared by both rescoord.cc and rvmrescoord.cc */
 /* Resolves all kinds of weak equality, runts, and VV already equal cases */
 int RegDirResolution(res_mgrpent *mgrp, ViceFid *Fid, ViceVersionVector **VV,
-		     ResStatus **rstatusp, int *logresreq)
+		     ResStatus **rstatusp)
 {
     SLog(1, "Entering RegDirResolution for (%s)", FID_(Fid));
     ViceVersionVector *vv[VSG_MEMBERS];
@@ -451,20 +451,18 @@ Exit_Resolved:
 Exit:
     SLog(1, "RegDirResolution: Further resolution %srequired: errorCode = %d",
 	 done ? "not " : "", ret);
-
-    if (logresreq)
-	*logresreq = !done;
     return ret;
 }
 
-long OldDirResolve(res_mgrpent *mgrp, ViceFid *Fid, ViceVersionVector **VV)
+long OldDirResolve(res_mgrpent *mgrp, ViceFid *Fid, ViceVersionVector **VV,
+		   ResStatus **rstatusp, DirFid *HintFid)
 {
     long ret;
-    int logresreq;
 
     /* No resolution logs, we can only try to resolve the trivial cases */
-    ret = RegDirResolution(mgrp, Fid, VV, NULL, &logresreq);
-    if (logresreq || ret) {
+    ret = RegDirResolution(mgrp, Fid, VV, rstatusp);
+    if (ret && (!HintFid || !(HintFid->Vnode || HintFid->Unique)))
+    {
 	SLog(9,  "OldDirResolution marking %s as conflict", FID_(Fid));
 	MRPC_MakeMulti(MarkInc_OP, MarkInc_PTR, VSG_MEMBERS,
 		       mgrp->rrcc.handles, mgrp->rrcc.retcodes, 

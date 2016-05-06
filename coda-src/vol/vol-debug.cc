@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2004 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -50,7 +50,7 @@ void PrintVolumeDiskData(FILE *outfile, VolumeDiskData *vdd){
 
   fprintf(outfile, "  backupId = %08x  restoredFromId = %08x  needsCallback = %02x\n", vdd->backupId, vdd->restoredFromId, vdd->needsCallback);
 
-  fprintf(outfile, "  destroyMe = %02x  dontSalvage = %02x  ResOn = %02x\n", vdd->destroyMe, vdd->dontSalvage, vdd->ResOn);
+  fprintf(outfile, "  destroyMe = %02x  dontSalvage = %02x\n", vdd->destroyMe, vdd->dontSalvage);
 
   fprintf(outfile, "  maxquota = %d  minquota = %d  maxfiles = %d\n", vdd->maxquota, vdd->minquota, vdd->maxfiles);
 

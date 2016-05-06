@@ -82,7 +82,6 @@ extern "C" {
 #include "cvnode.h"
 #include "volume.h"
 #include "lockqueue.h"
-#include <recov_vollog.h>
 #include "vldb.h"
 #include "vutil.h"
 #include "fssync.h"
@@ -320,13 +319,6 @@ void VInitVolumePackage(int nLargeVnodes, int nSmallVnodes, int DoSalvage)
 		InSkipVolumeList(header.parent, skipvolnums, nskipvols)){
 		VLog(0, "Forcing Volume %x Offline", header.id);
 		VForceOffline(vp);
-	    } else {
-		if (V_type(vp) == readwriteVolume) {
-		    /* initialize the RVM log vm structures */
-		    V_VolLog(vp)->ResetTransients(V_id(vp));
-		    extern olist ResStatsList;
-		    ResStatsList.insert((olink *)V_VolLog(vp)->vmrstats);
-		}
 	    }
 	    VPutVolume(vp);
 	}

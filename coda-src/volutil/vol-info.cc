@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -128,12 +128,6 @@ long int S_VolInfo(RPC2_Handle rpcid, RPC2_String formal_volkey, RPC2_Integer du
 
     infofile = fopen(INFOFILE, "w");
     PrintHeader(vp);
-    if (AllowResolution && V_RVMResOn(vp)) {
-	V_VolLog(vp)->print(infofile);
-	V_VolLog(vp)->vmrstats->precollect();
-	V_VolLog(vp)->vmrstats->print(infofile);
-	V_VolLog(vp)->vmrstats->postcollect();
-    }
     if (dumpall) {
 	fprintf(infofile, "\nLarge vnodes (directories)\n");
 	printvns(vp, vLarge);

@@ -112,7 +112,6 @@ extern "C" {
 #include <coda_globals.h>
 #include <volhash.h>
 #include <bitmap.h>
-#include <recle.h>
 #include <vice_file.h>
 
 
@@ -852,35 +851,6 @@ static int JudgeEntry(struct DirEntry *de, void *data)
 
 }
 
-static void MarkLogEntries(rec_dlist *loglist, VolumeSummary *vsp) 
-{
-    VLog(9, "Entering MarkLogEntries....\n");
-    if (!loglist) {
-	VLog(0, "MarkLogEntries: loglist was NULL ...\n");
-	return;
-    }
-    CODA_ASSERT(vsp->logbm);
-    rec_dlist_iterator next(*loglist);
-    recle *r;
-    while ((r = (recle *)next())) {
-	if (vsp->logbm->Value(r->index))  {
-	    VLog(0, "MarkLogEntries: This index %d already set\n",
-		   r->index);
-	    r->print();
-	    CODA_ASSERT(0);
-	}
-	else 
-	    vsp->logbm->SetIndex(r->index);
-	rec_dlist *childlist;
-	if ((childlist = r->HasList())) {
-	    VLog(9, "MarkLogEntries: Looking recursively.....\n");
-	    MarkLogEntries(childlist, vsp);
-	}
-    }
-    VLog(9, "Leaving MarkLogEntries....\n");
-}
-
-
 static void DistilVnodeEssence(VnodeClass vclass, VolumeId volid) {
 
     struct VnodeInfo *vip = &vnodeInfo[vclass];
@@ -944,7 +914,6 @@ static void DistilVnodeEssence(VnodeClass vclass, VolumeId volid) {
 		}
 		else
 		    vip->dirnodes[v] = vnode->node.dirNode;
-		vep->log = vnode->log;
 	    }
 	}
     }
@@ -966,7 +935,6 @@ void DirCompletenessCheck(struct VolumeSummary *vsp)
     VolumeDiskData volHeader;
     struct DirSummary dir;
     struct VnodeInfo *dirVnodeInfo;
-    int RecoverableResLogs = (AllowResolution && vsp->vollog != NULL);
     Error ec = 0;
 
     vid = vsp->header.id;
@@ -981,8 +949,6 @@ void DirCompletenessCheck(struct VolumeSummary *vsp)
     DistilVnodeEssence(vLarge, vid);
     DistilVnodeEssence(vSmall, vid);
 
-    if (RecoverableResLogs) 
-	    vsp->logbm = new bitmap(vsp->vollog->bmsize(), 0);
     dir.Vid = vid;
     dirVnodeInfo = &vnodeInfo[vLarge];
     /* iterate through all directory vnodes in this volume */
@@ -1014,21 +980,8 @@ void DirCompletenessCheck(struct VolumeSummary *vsp)
 	    DC_Put(dir.dirCache);
 	    VLog(9, "DCC: Finished checking directory(%#x.%x.%x)",
 		   vsp->header.id, dir.vnodeNumber, dir.unique);
-
-	    if (RecoverableResLogs) {
-		    SLog(9, "DCC: Marking log entries for %#x.%x.%x",
-			 vid, dirVnodeInfo->vnodes[i].vid, 
-			 dirVnodeInfo->vnodes[i].unique);
-		    MarkLogEntries(dirVnodeInfo->vnodes[i].log, vsp);
-	    }
     }
 
-    // salvage the resolution logs 
-    if (RecoverableResLogs) {
-	    SLog(0, "DCC: Salvaging Logs for volume 0x%x", vid);
-	    vsp->vollog->SalvageLog(vsp->logbm);
-	    delete vsp->logbm;
-    }
     /* check link counts, parent pointers */
     for (vclass = 0; vclass < nVNODECLASSES; vclass++) {
 	    int nVnodes = vnodeInfo[vclass].nVnodes;
@@ -1668,14 +1621,6 @@ static int GetVolumeSummary(VolumeId singleVolumeNumber)
 	    vsp->header.id, i);
 	HashInsert(vsp->header.id, i);
 
-	// prepare for checking resolution logs
-	vsp->logbm = NULL;
-	if ((SRV_RVM(VolumeList[i]).data.volumeInfo->ResOn & RVMRES) && AllowResolution &&
-	    (vsp->header.type == readwriteVolume))
-	    vsp->vollog = SRV_RVM(VolumeList[i]).data.volumeInfo->log;
-	else 
-	    vsp->vollog = NULL;
-	
 	/* Is this the specific volume we're looking for? */
 	if (singleVolumeNumber && vsp->header.id == singleVolumeNumber) {
 	    if (vsp->header.type == readonlyVolume) {	// skip readonly volumes

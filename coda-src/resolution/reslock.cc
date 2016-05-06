@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2008 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -66,7 +66,6 @@ long RS_LockAndFetch(RPC2_Handle RPCid, ViceFid *Fid,
     Volume *volptr = 0;
     Vnode *vptr = 0;
     *logsize = 0;
-    int nentries  = 0;
 
     SLog(1, "Entering RS_LockAndFetch %s\n", FID_(Fid));
     CODA_ASSERT(Request == FetchStatus);
@@ -111,22 +110,6 @@ long RS_LockAndFetch(RPC2_Handle RPCid, ViceFid *Fid,
     // set out parameter
     memcpy(VV, &(Vnode_vv(vptr)), sizeof(ViceVersionVector));
     ObtainResStatus(rstatus, &(vptr->disk));
-
-    /* set log size as the volume log size -
-       that is the max log size a client
-       can send in the collect logs phase */
-    if (AllowResolution && V_RVMResOn(volptr)) {
-	    // set size to max possible
-	    // by using rename_rle we hope that all strings will fit
-	    // in the buffer length being returned.
-	    nentries = V_VolLog(volptr)->size;
-	    CODA_ASSERT(nentries > 0);
-
-	    // *logsize = nentries * (sizeof(recle) + sizeof(rename_rle));
-	    *logsize = nentries * 200;
-	    SLog(39, "RS_LockAndFetch: Returning recov. logsize = %d\n",
-		 *logsize);
-    }
 
     /* if probing and timing is on then init the array */
     if (pathtiming && probingon && vptr->disk.type == vDirectory ) {

@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2008 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -60,9 +60,7 @@ extern "C" {
 }
 #endif
 
-#include <vmindex.h>
 #include <srv.h>
-#include <recov_vollog.h>
 #include "coppend.h"
 #include <lockqueue.h>
 #include <vldb.h>
@@ -77,7 +75,6 @@ extern "C" {
 #include <res.h>
 #include <resutil.h>
 #include <rescomm.h>
-#include <ops.h>
 #include <timing.h>
 
 #define	EMPTYDIRBLOCKS	    2
@@ -149,9 +146,8 @@ static int getFids(struct DirEntry *dirent, void * data);
 
 static int GetRepairObjects(Volume *, vle *, dlist *, 
 			     struct repair *, int );
-static int GetResFlag(VolumeId );
 
-static void COP2Update(Volume *, Vnode *, ViceVersionVector *, vmindex * =NULL);
+static void COP2Update(Volume *, Vnode *, ViceVersionVector *);
 
 const int MaxFidAlloc = 32;
 
@@ -278,7 +274,7 @@ Exit:
     return(errorCode);
 }
 
-static long ViceResolveOne(vrent *vre, int reson, ViceFid *Fid, DirFid *HintFid)
+static long ViceResolveOne(vrent *vre, ViceFid *Fid, DirFid *HintFid)
 {
     int errorCode = 0;
     ViceVersionVector VV;
@@ -336,13 +332,8 @@ static long ViceResolveOne(vrent *vre, int reson, ViceFid *Fid, DirFid *HintFid)
 
     if (ISDIR(*Fid)) {
 	    SLog(9,  "ViceResolve: Going to call DirResolve");
-	    if (reson) {
-		resError = RecovDirResolve(mgrp, Fid, VVvar_ptrs,
-					   rstatusvar_ptrs,
-					   (int *)logsizesvar_bufs, HintFid);
-	    } else {
-		resError = OldDirResolve(mgrp, Fid, VVvar_ptrs);
-	    }
+            resError = OldDirResolve(mgrp, Fid, VVvar_ptrs, 
+                                     rstatusvar_ptrs, HintFid);
     } else {
 	    SLog(9, "ViceResolve: Going to call Fileresolve");
 	    resError = FileResolve(mgrp, Fid, VVvar_ptrs);
@@ -391,7 +382,6 @@ long FS_ViceResolve(RPC2_Handle cid, ViceFid *Fid)
     int i = 1, j;
     long err;
 
-    int reson = GetResFlag(Fid->Volume);
     vrent *vre = VRDB.find(Fid->Volume);
     if (!vre) {
 	SLog(0, "ViceResolve: Can't find replicated volume (%s)", FID_(Fid));
@@ -402,7 +392,7 @@ long FS_ViceResolve(RPC2_Handle cid, ViceFid *Fid)
     FID_VFid2DFid(Fid, &hints[0]);
     while (i < MAX_HINTS)
     {
-	err = ViceResolveOne(vre, reson, Fid, &hints[i]);
+	err = ViceResolveOne(vre, Fid, &hints[i]);
 
 	/* loop avoidance */
 	for (j = 0; j < i; j++)
@@ -422,7 +412,7 @@ long FS_ViceResolve(RPC2_Handle cid, ViceFid *Fid)
     while (i-- > 0)
     {
 	FID_DFid2VFid(&hints[i], Fid);
-	err = ViceResolveOne(vre, reson, Fid, NULL);
+	err = ViceResolveOne(vre, Fid, NULL);
     }
     return err;
 }
@@ -640,27 +630,6 @@ long FS_ViceRepair(RPC2_Handle cid, ViceFid *Fid, ViceStatus *status,
 	memset((void *)fids, 0, MAXFIDS * (int) sizeof(ViceFid));
 	fids[0] = (ov->fid);
 	CopPendingMan->add(new cpent(StoreId, fids));
-    }
-
-    // append a new log record 
-    if (!FRep) {
-	SLog(9, "ViceRepair: Spooling Repair Log Record");
-	if ((errorCode = SpoolVMLogRecord(vlist, ov, volptr, StoreId, 
-					  ViceRepair_OP, 0))) {
-	    SLog(0, "ViceRepair: error %d in SpoolVMLogRecord for (%s)\n",
-		 errorCode, FID_(Fid));
-	    goto FreeLocks;
-	}
-	// set log of dir being repaired for truncation 
-	ov->d_needslogtrunc = 1;
-    }
-    // mark all deleted children's logs for purging - (Note: not truncation)
-    if (!FRep && !errorCode) {
-	dlist_iterator next(*vlist);
-	vle *v;
-	while ((v = (vle *)next())) 
-	    if (v->vptr && v->vptr->delete_me)
-		v->d_needslogpurge = 1;
     }
 
 FreeLocks:
@@ -1529,27 +1498,6 @@ static int PerformDirRepair(ClientEntry *client, vle *ov, Volume *volptr,
 		    SetIncon(sdv->vptr->disk.versionvector);
 		if (!IsIncon(tdv->vptr->disk.versionvector))
 		    SetIncon(tdv->vptr->disk.versionvector);
-
-		// make sure a repair record gets spooled for both parents
-		// the ov's repair record gets spooled at the end 
-		if (tdv != ov) {
-		    SLog(0, "PerformRepair: Spooling Repair(rename - target) Log Record");
-		    if ((errorCode = SpoolVMLogRecord(vlist, tdv, volptr, StoreId, 
-						      ViceRepair_OP, 0))) {
-			SLog(0, "ViceRepair: error %d in SpoolVMLogRecord for (0x%x.%x)\n",
-			     errorCode, tdv->vptr->vnodeNumber, tdv->vptr->disk.uniquifier);
-			return(errorCode);
-		    }
-		}
-		if (sdv != ov) {
-		    SLog(0, "PerformRepair: Spooling Repair(rename - source) Log Record");
-		    if ((errorCode = SpoolVMLogRecord(vlist, sdv, volptr, StoreId, 
-						      ViceRepair_OP, 0))) {
-			SLog(0, "ViceRepair: error %d in SpoolVMLogRecord for (0x%x.%x)\n",
-			     errorCode, sdv->vptr->vnodeNumber, sdv->vptr->disk.uniquifier);
-			return(errorCode);
-		    }
-		}
 	    }
 	    break;
 	  case REPAIR_SETACL:
@@ -2047,30 +1995,6 @@ int PerformTreeRemoval(PDirEntry de, void *data)
 		nblocks = (int)-nBlocks(cv->vptr->disk.length);
 		CODA_ASSERT(AdjustDiskUsage(pkdparm->volptr, nblocks) == 0);
 		*(pkdparm->blocks) += nblocks;
-
-		//spool log record for resolution 
-		if (pkdparm->IsResolve) {
-		    // find log record for original remove operation
-		    // - extract storeid 
-		    ViceStoreId stid;
-		    ViceStoreId *rmtstid = GetRemoteRemoveStoreId(pkdparm->hvlog, pkdparm->srvrid, &pFid, &cFid, name);
-		    if (!rmtstid) {
-			SLog(0, "PerformTreeRemoval: No rm record found for %s 0x%x.%x.%x\n",
-			     name, V_id(pkdparm->volptr), vnode, unique);
-			AllocStoreId(&stid);
-		    }
-		    else stid = *rmtstid;
-
-		    SLog(9, "TreeRemove: Spooling Log Record for removing dir %s", name);
-		    int errorCode = 0;
-		    if ((errorCode = SpoolVMLogRecord(pkdparm->vlist, pv, 
-						      pkdparm->volptr, &stid,
-						      ResolveViceRemoveDir_OP, name, 
-						      vnode, unique, 
-						      VnLog(cv->vptr), &(Vnode_vv(cv->vptr).StoreId),
-						      &(Vnode_vv(cv->vptr).StoreId))))
-			SLog(0, "PerformTreeRemoval: error %d in SpoolVMLogRecord for (0x%x.%x)\n", errorCode, vnode, unique);
-		}
 	    }
 	    else
 	    {
@@ -2086,27 +2010,6 @@ int PerformTreeRemoval(PDirEntry de, void *data)
 		    *(pkdparm->blocks) += nblocks;
 		    cv->f_sinode = cv->vptr->disk.node.inodeNumber;
 		    cv->vptr->disk.node.inodeNumber = 0;
-		}
-
-		//spool log record for resolution 
-		if (pkdparm->IsResolve) {
-		    // find log record for original remove operation - extract storeid 
-		    ViceStoreId stid;
-		    ViceStoreId *rmtstid = GetRemoteRemoveStoreId(pkdparm->hvlog, pkdparm->srvrid, &pFid, &cFid, name);
-		    if (!rmtstid) {
-			SLog(0, "PerformTreeRemoval: No rm record found for %s 0x%x.%x.%x\n", name, V_id(pkdparm->volptr), vnode, unique);
-			AllocStoreId(&stid);
-		    }
-		    else stid = *rmtstid;
-
-		    SLog(9, "TreeRemove: Spooling Log Record for removing %s", name);
-		    int errorCode = 0;
-		    if ((errorCode = SpoolVMLogRecord(pkdparm->vlist, pv, 
-						      pkdparm->volptr, &stid,
-						      ResolveViceRemove_OP, name, 
-						      vnode, unique, 
-						      &(Vnode_vv(cv->vptr)))))
-			SLog(0, "PerformTreeRemoval: error %d in SpoolVMLogRecord for (0x%x.%x)\n", errorCode, vnode, unique);
 		}
 	    }
 	}
@@ -2124,8 +2027,6 @@ long InternalCOP2(RPC2_Handle cid, ViceStoreId *StoreId, ViceVersionVector *Upda
     cpent *cpe = 0;
     int nfids = 0;
     rvm_return_t status = RVM_SUCCESS;
-    vmindex freed_indices;
-    recov_vol_log *vollog = NULL;
 
 START_TIMING(COP2_Total);
 
@@ -2158,16 +2059,13 @@ START_TIMING(COP2_Total);
 	}
     }
 
-    if (!errorCode && volptr && V_RVMResOn(volptr))
-	vollog = V_VolLog(volptr);
-
 START_TIMING(COP2_Transaction);
     rvmlib_begin_transaction(restore);
     if (!errorCode) {
 	/* Update the version vectors. */
 	for (i = 0; i < nfids; i++)
 	    if (vptrs[i])
-		COP2Update(volptr, vptrs[i], UpdateSet, &freed_indices);
+		COP2Update(volptr, vptrs[i], UpdateSet);
     }
     /* Put the vnodes. */
     for (i = 0; i < nfids; i++)
@@ -2187,42 +2085,10 @@ END_TIMING(COP2_Transaction);
 	delete cpe;
     }
 
-    if ((status == 0) && !errorCode && vollog) {
-	/* the transaction was successful -
-	   free up vm bitmap corresponding to 
-	   log records that were truncated */
-	vmindex_iterator next(&freed_indices);
-	unsigned long ind;
-	while ((int) (ind = next()) != -1) 
-	    vollog->DeallocRecord((int)ind);
-    }
-
     SLog(2,  "InternalCOP2 returns %s", ViceErrorMsg(errorCode));
 END_TIMING(COP2_Total);
 
     return(errorCode);
-}
-
-/* get resolution flags for a given volume */
-static int GetResFlag(VolumeId Vid)
-{
-    int error = 0;
-    Volume *volptr = 0;
-
-    if (!XlateVid(&Vid)) {
-	SLog(0,  "GetResFlag: Couldn't xlate vid %x", Vid);
-	return 0;
-    }
-
-    if (!AllowResolution) return(0);
-    if ((error = GetVolObj(Vid, &volptr, VOL_NO_LOCK, 0, 0))) {
-	SLog(0,  "GetResFlag:: GetVolObj failed (%d) for %x",
-		error, Vid);
-	return(0);
-    }
-    int reson = V_RVMResOn(volptr);
-    PutVolObj(&volptr, VOL_NO_LOCK, 0);
-    return(reson);
 }
 
 static int FidSort(ViceFid *fids) {
@@ -2318,8 +2184,7 @@ void NewCOP1Update(Volume *volptr, Vnode *vptr,
 */
 
 static void COP2Update(Volume *volptr, Vnode *vptr, 
-			ViceVersionVector *UpdateSet, 
-		       vmindex *freed_indices) 
+			ViceVersionVector *UpdateSet)
 {
     /* Look up the VRDB entry. */
     vrent *vre = VRDB.find(V_groupId(volptr));
@@ -2346,9 +2211,6 @@ static void COP2Update(Volume *volptr, Vnode *vptr,
 		    SLog(0, "Incomplete host set in COP2.\n");
 		    break;
 	    }
-
-	if (i == VSG_MEMBERS && freed_indices) 
-	    TruncateLog(volptr, vptr, freed_indices);
     }
     
     /* do a cop2 only if the cop2 pending flag is set */

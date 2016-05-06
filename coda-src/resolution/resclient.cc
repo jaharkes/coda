@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -46,7 +46,6 @@ extern "C" {
 }
 #endif
 
-#include <recov_vollog.h>
 #include <lockqueue.h>
 #include <cvnode.h>
 #include <olist.h>
@@ -57,7 +56,6 @@ extern "C" {
 #include <treeremove.h>
 #include <vrdb.h>
 
-#include "ops.h"
 #include "rescomm.h"
 #include "resutil.h"
 #include "timing.h"
@@ -160,29 +158,6 @@ long RS_InstallVV(RPC2_Handle RPCid, ViceFid *Fid, ViceVersionVector *VV,
 	UpdateVVs(&V_versionvector(volptr), &Vnode_vv(ov->vptr), VV);
 	ClearCOP2Pending(ov->vptr->disk.versionvector);	
 	(&(VV->Versions.Site0))[ix] = 1;
-	
-	SLog(0, "Going to spool log entry for phase3\n");
-	CODA_ASSERT(SpoolVMLogRecord(vlist, ov, volptr, &(VV->StoreId), ResolveNULL_OP, 0) == 0);
-    }
-    /* truncate log if success everywhere in phase 1 */
-    {
-	SLog(9, "InstallVV: Going to check if truncate log possible");
-	unsigned long Hosts[VSG_MEMBERS];
-	int i = 0;
-	vv_t checkvv;
-
-	vre->GetHosts(Hosts);
-	vre->HostListToVV(Hosts, &checkvv);
-	for (i = 0; i < VSG_MEMBERS; i++) 
-	    if (((&(checkvv.Versions.Site0))[i]) ^ 
-		((&(VV->Versions.Site0))[i]))
-		break;
-	if (i == VSG_MEMBERS) {
-	    /* update set has 1 for all hosts */
-	    SLog(9, "InstallVV: Success everywhere - truncating log");
-	    if (AllowResolution && V_RVMResOn(volptr)) 
-		ov->d_needslogtrunc = 1;
-	}
     }
     
     /* return contents of directory in a buffer for coordinator to compare */
@@ -366,12 +341,6 @@ int CreateObjToMarkInc(Volume *vp, ViceFid *dFid, ViceFid *cFid,
 		    CODA_ASSERT(cv->f_sinode > 0);
 		    cv->vptr->disk.node.inodeNumber = cv->f_sinode;
 		    cv->f_sinode = 0;
-
-		    // spool log record for recoverable res logs 
-		    if ((errorCode = SpoolVMLogRecord(vlist, pv, vp, &stid,
-						      ResolveViceCreate_OP, 
-						      name, cFid->Vnode, cFid->Unique)))
-			SLog(0, "CreateObjToMarkInc: Error %d during SpoolVMLogRecord\n", errorCode);
 		}
 		return(errorCode);
 	    }
@@ -428,12 +397,6 @@ int CreateObjToMarkInc(Volume *vp, ViceFid *dFid, ViceFid *cFid,
 					   cv->vptr->disk.dataVersion);
 		    CODA_ASSERT(cv->f_finode > 0);
 		    cv->vptr->disk.node.inodeNumber = cv->f_finode;
-
-		    // spool log record 
-		    if ((errorCode = SpoolVMLogRecord(vlist, pv, vp, &stid,
-						      ResolveViceCreate_OP, 
-						      name, cFid->Vnode, cFid->Unique)))
-			SLog(0, "CreateObjToMarkInc: Error %d during SpoolVMLogRecord\n", errorCode);
 		}
 		else if (cv->vptr->disk.type == vSymlink) {
 		    if ((errorCode = CheckSymlinkSemantics(NULL, &pv->vptr, 
@@ -459,11 +422,6 @@ int CreateObjToMarkInc(Volume *vp, ViceFid *dFid, ViceFid *cFid,
 					   cv->vptr->disk.dataVersion);
 		    CODA_ASSERT(cv->f_finode > 0);
 		    cv->vptr->disk.node.inodeNumber = cv->f_finode;
-
-		    if ((errorCode = SpoolVMLogRecord(vlist, pv, vp, &stid, 
-						      ResolveViceSymLink_OP, 
-						      name, cFid->Vnode, cFid->Unique))) 
-			SLog(0, "CreateObjToMarkInc(symlink): Error %d in SpoolVMLogRecord\n", errorCode);
 		}
 		else {
 		    CODA_ASSERT(cv->vptr->disk.type == vDirectory);
@@ -484,10 +442,6 @@ int CreateObjToMarkInc(Volume *vp, ViceFid *dFid, ViceFid *cFid,
 					     &pv->d_cinode, &tblocks);
 		    *blocks += tblocks;
 		    CODA_ASSERT(errorCode == 0);
-		    if ((errorCode = SpoolVMLogRecord(vlist, pv, vp, &stid,
-						      ResolveViceMakeDir_OP,
-						      name, cFid->Vnode, cFid->Unique))) 
-			SLog(0, "CreateObjToMarkInc(Mkdir): Error %d during SpoolVMLogRecord for parent\n", errorCode);
 		}
 	    }
 	}

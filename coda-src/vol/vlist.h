@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -15,11 +15,6 @@ listed in the file CREDITS.
                            none currently
 
 #*/
-
-
-
-
-
 
 /*
  * Vlist.h -- Created October 1989
@@ -61,8 +56,6 @@ extern vle *AddVLE(dlist&, ViceFid *);
 #define d_inodemod      u.dir.inodemod
 #define	d_cinode        u.dir.cinode
 #define	d_needsres      u.dir.needsres
-#define d_needslogpurge u.dir.purgelog
-#define d_needslogtrunc u.dir.trunclog
 #define d_reintupdate   u.dir.rupdate
 #define d_reintstale    u.dir.rstale
 
@@ -71,8 +64,6 @@ struct vle : public dlink
 {
 	ViceFid fid;
 	Vnode *vptr;
-	olist sl;   /* list of spooled log records - for res logs in vm only */
-	olist rsl;  /* list of spooled log records - for res logs in rvm */
 	union {
 		struct {
 			ViceStoreId	sid;   /* sid of LAST data
@@ -88,8 +79,6 @@ struct vle : public dlink
 			int inodemod;      /* inode or pages modified */
 			int needsres;      /* does directory need to
 			be resolved at end of reintegration? */
-			int purgelog;      /* should directory log be purged */
-			int trunclog;  	   /* should log be truncated */
 			unsigned rupdate : 1;  /* was directory
 						  updated during
 						  reintegration */
@@ -112,8 +101,6 @@ struct vle : public dlink
 			d_cinode = 0;
 			d_inodemod = 0;
 			d_needsres = 0;
-			d_needslogpurge = 0;
-			d_needslogtrunc = 0;
 			d_reintupdate = 0;
 			d_reintstale = 0;
 		}

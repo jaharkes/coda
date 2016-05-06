@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -115,9 +115,8 @@ void print_volume_details(VolHead *vol)
     printf("    destroyMe: %d\tdontSalvage: %d\n",
 	   vol->data.volumeInfo->destroyMe, vol->data.volumeInfo->dontSalvage);
 //    PrintVV(vol->data.volumeInfo->versionvector);
-    printf("    needsCallback: %s\tResOn: %s\n",
-	   vol->data.volumeInfo->needsCallback ? "TRUE" : "FALSE",
-	   vol->data.volumeInfo->ResOn ? "TRUE" : "FALSE");
+    printf("    needsCallback: %s\n",
+	   vol->data.volumeInfo->needsCallback ? "TRUE" : "FALSE");
     printf("    minquota: %d\tmaxquota: %d\tmaxfiles: %d\n",
 	   vol->data.volumeInfo->minquota,
 	   vol->data.volumeInfo->maxquota,

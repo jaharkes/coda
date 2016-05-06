@@ -34,10 +34,6 @@ extern "C" {
 }
 #endif
 
-//#include <reslog.h>
-//#include <remotelog.h>
-#include <rsle.h>
-#include <parselog.h>
 #include <cvnode.h>
 #include <volume.h>
 #include <index.h>
@@ -123,15 +119,6 @@ int DumpVolDiskData(int fd, VolumeDiskData *data){
 	perror("Writing volume disk data");
 	return 0;
     }
-
-    /* Check that the resolution flag is on before writing any log information */
-    if (data->ResOn & 4) {
-	if (write(fd, (void *)&data->log->admin_limit, (int)sizeof(int)) == -1) {
-	    perror("Writing resolution log admin limit");
-	    return 0;
-	}
-    }
-
     return 1;
 }
 
@@ -142,187 +129,9 @@ static int ReadVolDiskData(int fd, VolumeDiskData *data, int *adm_limit){
 	perror("Reading volume disk data\n");
 	return 0;
     }
-
-    if (data->ResOn & 4) {
-	if ((ret = read(fd, (void *)adm_limit, (int)sizeof(int))) == -1) {
-	    perror("Reading resolution log admin limit");
-	    return 0;
-	}
-    }
-
     return ret;
 }
 
-
-static int DumpResLog(int fd, struct VolumeData *voldata,
-		       VnodeDiskObject *vnode) {
-    Volume    vol, *vp;		// We need to fake out the DumpLog routine
-    volHeader vh;
-    char      *buf = NULL;
-    int	      size = 0,
-	      nentries = 0,
-	      ret = 1;
-
-
-    /* Check that resolution is on, otherwise return error */
-    if (!(voldata->volumeInfo->ResOn & 4)) {
-	fprintf(stderr, "DumpResLog called on volume that doesn't ");
-	fprintf(stderr, "have resolution turned on.");
-	return 0;
-    }
-    
-    /* Mush the data into the right data structure */
-    memcpy(&vh.diskstuff, voldata->volumeInfo, sizeof(VolumeDiskData));
-    vp = &vol;
-    vp->header = &vh;
-
-    DumpLog(vnode->log, vp, &buf, &size, &nentries);
-
-    /* Write out the number of entries and the size */
-    if (write(fd, &nentries, (int)sizeof(nentries)) == -1) {
-	perror("Writing number of entries");
-	if (buf) free(buf);
-	return 0;
-    }
-
-    if (write(fd, &size, (int)sizeof(size)) == -1) {
-	perror("Writing resolution log buffer size");
-	if (buf) free(buf);
-	return 0;
-    }
-    
-    if (write(fd, buf, size) == -1) {
-	perror("Writing resolution log");
-	ret = 0;
-    }
-
-    if (norton_debug)
-	printf("    Wrote resolution log of %d entries for %d bytes\n",
-	       nentries, size);
-    
-    if (buf) free(buf);
-    return ret;
-}
-
-
-
-// Must be called withing a transaction.
-static recle *AllocLogEntry(Volume *vp, rsle *entry) {
-    recle *rle;
-    int   index = -1;
-    int   seqno = -1;
-
-    if (V_VolLog(vp)->AllocRecord(&index, &seqno) != 0) {
-	fprintf(stderr, "Can't allocate a vollog record! Aborting.\n");
-	return NULL;
-    }
-
-    rle = V_VolLog(vp)->RecovPutRecord(index);
-    if (!rle) {
-	fprintf(stderr, "Can't put a vollog record! Aborting.\n");
-	return NULL;
-    }
-
-    // Cram the correct index into the log entery.
-    entry->index = index;
-    rle->InitFromsle(entry);
-    if (norton_debug) rle->print();
-
-    return rle;
-}
-
-
-// If an error occures, set *err = 1, otherwise *err = 0
-static int BuildResLog(Volume *vp, rec_dlist *log,
-			 VnodeId pvn, /*Parent vnode */ 
-			 Unique_t pu, /*parent uniquifier */
-			 int nentries, int start,
-			 rsle *logentries, int *err) {
-    recle *rle;
-    int   i = start;
-
-    *err = 0;
-    
-    while (i <  nentries &&
-	   ((pvn == 0) ||
-	    ((logentries[i].dvn == pvn) && (logentries[i].du == pu)))) {
-
-	if (!(rle = AllocLogEntry(vp, &logentries[i]))) {
-	    *err = 1;
-	    return -1;
-	}
-	      
-	log->append(rle);
-	i++;
-	
-	if ((rle->opcode == RES_RemoveDir_OP) ||
-	    (rle->opcode == ResolveViceRemoveDir_OP)) {
-
-	    // Should I check that there is actually a list?
-	    // Should I allocate on entry to BuildResLog?
-	    rmdir_rle *r = (rmdir_rle *)(&(rle->vle->vfld[0]));
-	    r->childlist = new rec_dlist();
-
-	    i += BuildResLog(vp, r->childlist, r->cvnode,
-			      r->cunique, nentries, i,
-			      logentries, err);
-	    if (err) return -1;
-	}
-
-    }
-    return i - start;
-}
-
-
-/* Warning: ReadResLog better not be called for a volume that does not
- * have resolution turned on.
- */
-static int ReadResLog(int fd, Volume *vp, Vnode *vnp) {
-    int   nentries,
-	  size,
-	  err;
-    char  *buf;
-    olist *hlist;
-    rsle  *logentries;
-    
-    /* Read in the number of entries and the size */
-    if (read(fd, &nentries, (int)sizeof(nentries)) == -1) {
-	perror("Reading number of resolution log entries");
-	return 0;
-    }
-
-    if (read(fd, &size, (int)sizeof(size)) == -1) {
-	perror("Reading size of resolution log");
-	return 0;
-    }
-
-    if (!(buf = (char *)malloc(size))) {
-	fprintf(stderr, "Unable to malloc resolution log buffer\n");
-	return 0;
-    }
-
-    if (read(fd, buf, size) == -1) {
-	perror("Reading resolution log");
-	free(buf);
-	return 0;
-    }
-    if (norton_debug) {
-	printf("    Read resolution log of %d entries for %d bytes\n",
-	       nentries, size);
-    }
-
-    ParseRemoteLogs(buf, size, nentries, &hlist, &logentries);
-
-    // Initialize the log list.
-    VnLog(vnp) = new rec_dlist();
-
-    // Now copy it to RVM.
-    BuildResLog(vp, VnLog(vnp), 0, 0, nentries, 0, logentries, &err);
-    
-    free(buf);
-    if (err) return 0;
-    else return 1;
-}
 
 #define VNODESIZE(vclass) ((vclass) == vLarge ? \
 			   SIZEOF_LARGEDISKVNODE :\
@@ -399,11 +208,6 @@ static int DumpVnodeList(int fd, struct VolumeData *vol, int vol_index,
 		    return 0;
 		}
 	    }
-
-	    /* Finally write the resolution log */
-	    if (vol->volumeInfo->ResOn & 4) {
-		if (!DumpResLog(fd, vol, vnode)) return 0;
-	    }
 	}
     }
     return 1;
@@ -437,7 +241,7 @@ int CopyDirInode(PDirInode oldinode, PDirInode *newinode)
 
 }
 
-static int ReadVnodeList(int fd, Volume *vp, VnodeClass vclass, int ResOn) {
+static int ReadVnodeList(int fd, Volume *vp, VnodeClass vclass) {
     char   buf[SIZEOF_LARGEDISKVNODE];
     VnodeDiskObject *vnode = (VnodeDiskObject *) buf;
     Vnode 	*vnp;
@@ -541,21 +345,6 @@ static int ReadVnodeList(int fd, Volume *vp, VnodeClass vclass, int ResOn) {
 	    }
 
 	    vnp->disk.node.dirNode = newinode;
-
-	    /* Read in the resolution log */
-	    if (ResOn) {
-		if (!ReadResLog(fd, vp, vnp)) {
-		    rvmlib_abort(VFAIL);
-		    return 0;
-		}
-	    } else {
-		/* Create an empty log.  DO NOT ALLOW A RES LOG TO BE
-		 * CREATED for read only volumes.  at this point we
-		 * think they are read/write.
-		 */
-		fprintf(stderr, "WARNING: Volume ResOn = FALSE, fix norton ");
-		fprintf(stderr, "to create empty log.\n");
-	    }
 	}
 	if (norton_debug) PrintVnodeDiskObject(vnode);
 
@@ -578,9 +367,9 @@ static int ReadVnodeList(int fd, Volume *vp, VnodeClass vclass, int ResOn) {
 }
     
 
-static int ReadVolVnodes(int fd, Volume *vp, int ResOn) {
-    if (!ReadVnodeList(fd, vp, vLarge, ResOn)) return 0;
-    if (!ReadVnodeList(fd, vp, vSmall, ResOn)) return 0;
+static int ReadVolVnodes(int fd, Volume *vp) {
+    if (!ReadVnodeList(fd, vp, vLarge)) return 0;
+    if (!ReadVnodeList(fd, vp, vSmall)) return 0;
     return 1;
 }
 
@@ -740,11 +529,6 @@ static int load_server_state(char *dump_file, VolumeId *skipvols, int nskipvols)
 	    return 0;
 	}
 
-	/* Allocate space for the volume resolution log if needed */
-	if (data.ResOn & 4) {
-	    data.log = new recov_vol_log(vol_head.header.id, res_adm_limit);
-	}
-
 	if (vol_type != RWVOL) {
 	    // Pretend we are RW.
 	    data.type = RWVOL;
@@ -785,7 +569,7 @@ static int load_server_state(char *dump_file, VolumeId *skipvols, int nskipvols)
 	    print_volume(&vol_head);
 	    print_volume_details(&vol_head);
 	}
-	if (!ReadVolVnodes(dump_fd, vp, data.ResOn & 4)) {
+	if (!ReadVolVnodes(dump_fd, vp)) {
 	    fprintf(stderr, "Aborting...\n");
 	    FreeVolumeHeader(vp);
 	    return 0;

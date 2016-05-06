@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -44,6 +44,7 @@ extern "C" {
 
 #include <vice.h>
 #include <dlist.h>
+#include <volume.h>
 
 #define NO_LOCK		0	/* remains for compatibility */
 #define VOL_NO_LOCK	NO_LOCK

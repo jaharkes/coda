@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -73,9 +73,6 @@ extern "C" {
 #include <vutil.h>
 #include <vrdb.h>
 #include <codadir.h>
-
-#include <ops.h>
-#include <rsle.h>
 
 #define INFOFILE "/tmp/vshowvnode.tmp"
 static FILE *infofile;
@@ -157,9 +154,6 @@ long S_VolShowVnode(RPC2_Handle rpcid, RPC2_Unsigned formal_volid,
 	}
     }
     
-    if (AllowResolution && V_RVMResOn(vp) && vnp->disk.type == vDirectory) 
-	PrintLog(vnp, infofile);
-
     VPutVolume(vp);
 
     fclose(infofile);

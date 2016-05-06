@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -40,11 +40,11 @@ Pittsburgh, PA.
 #ifndef VOLUME_INCLUDED
 #define VOLUME_INCLUDED 1
 
-#include <recov_vollog.h>
 #include <vice.h>
 #include <dllist.h>
 #include <partition.h>
 #include "voldefs.h"
+#include "cvnode.h"
 
 
 #define VolumeWriteable(vp)		(V_type(vp)==readwriteVolume)
@@ -52,11 +52,7 @@ Pittsburgh, PA.
 
 #define FSTAG	84597		/* Unique tag for fileserver lwp rocks */
 
-/* volume flags indicating which type of resolution is turned on */
-//#define VMRES	1
-#define RVMRES	4
-
-typedef bit32				FileOffset; /* Offset in this file */
+typedef bit32 FileOffset;       /* Offset in this file */
 typedef enum {fileServer, volumeUtility, salvager, fsUtility} ProgramType;
 
 struct versionStamp {		/* Version stamp for critical volume files */
@@ -74,7 +70,7 @@ struct versionStamp {		/* Version stamp for critical volume files */
 #define ACLMAGIC		0x88877712
 
 #define VOLUMEHEADERVERSION	1
-#define VOLUMEINFOVERSION	1
+#define VOLUMEINFOVERSION	2
 #define	SMALLINDEXVERSION	1
 #define	LARGEINDEXVERSION	1
 #define	MOUNTVERSION		1
@@ -169,8 +165,7 @@ typedef struct VolumeDiskData {
     byte	reserveb3;
 
     ViceVersionVector versionvector;	/* CODA version vector for this volume */
-    int		ResOn;		/* Flag to turn on resolution */
-    bit32	reserved1[5];
+    bit32	reserved1[6];
 
 
     /* Administrative stuff */
@@ -212,9 +207,7 @@ typedef struct VolumeDiskData {
     /* Time that this copy of this volume was made.  NEVER backed up.
        This field is only set when the copy is created */
     Date_t	copyDate;
-    recov_vol_log *log;		/* Recoverable resolution log for this
-				   volume */
-    bit32	reserved4[7];
+    bit32	reserved4[8];
 
     /* messages */
 #define VMSGSIZE 128
@@ -360,8 +353,6 @@ struct volHeader {
 #define V_offlineMessage(vp)	((vp)->header->diskstuff.offlineMessage)
 #define V_motd(vp)		((vp)->header->diskstuff.motd)
 #define V_disk(vp)		((vp)->header->diskstuff)
-#define V_RVMResOn(vp)		((vp)->header->diskstuff.ResOn & RVMRES)
-#define V_VolLog(vp)		((vp)->header->diskstuff.log)
 
 extern char *ThisHost;		/* This machine's hostname */
 extern int ThisServerId;	/* this server id, as found in
@@ -374,7 +365,6 @@ extern int HInit;		/* Set to 1 when the volid hash table
 extern const char *VSalvageMessage; /* Common message used when the volume goes
 				       off line */
 extern int VolDebugLevel;	/* Controls level of debugging information */
-extern int AllowResolution;	/* global flag to turn on dir. resolution */
 extern void VInitVolumePackage(int nLargeVnodes, int nSmallVnodes, int DoSalvage);
 extern int VInitVolUtil(ProgramType pt);
 extern void VInitServerList(const char *host);

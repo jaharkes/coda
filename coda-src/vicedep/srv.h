@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -245,7 +245,6 @@ extern char *ViceErrorMsg(int);
 extern ViceVersionVector NullVV;
 extern long InternalCOP2(RPC2_Handle, ViceStoreId *, ViceVersionVector *);
 extern void NewCOP1Update(Volume *, Vnode *, ViceStoreId *, RPC2_Integer * =NULL);
-extern void COP2Update(Volume *, Vnode *, ViceVersionVector *);
 extern long InternalCOP2(RPC2_Handle, ViceStoreId *, ViceVersionVector *);
 extern void PollAndYield();
 extern int GetSubTree(ViceFid *, Volume *, dlist *);
@@ -315,9 +314,6 @@ extern void PrintCallBacks(ViceFid *, FILE *);
 extern CallBackStatus CodaAddCallBack(HostTable *, ViceFid *, VolumeId);
 extern void CodaBreakCallBack(HostTable *, ViceFid *, VolumeId);
 extern void CodaDeleteCallBack(HostTable *, ViceFid *, VolumeId);
-
-/* resolution */
-extern int AllowResolution;
 
 /* lookaside */
 extern int AllowSHA;

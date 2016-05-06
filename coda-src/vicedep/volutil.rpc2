@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2008 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -102,7 +102,7 @@ typedef RPC2_Struct {
 
 24: VolRVMSize(IN VolumeId VolID, OUT RVMSize_data data);
 
-25: VolSetLogParms(IN VolumeId Vid, IN RPC2_Integer OnFlag, IN RPC2_Integer maxentries);
+/* 25: VolSetLogParms */
 
 26: VolTiming(IN RPC2_Integer on, IN OUT SE_Descriptor sed);
 

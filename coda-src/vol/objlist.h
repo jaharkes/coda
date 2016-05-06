@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -45,8 +45,6 @@ extern "C" {
 #define d_inodemod      u.dir.inodemod
 #define	d_cinode        u.dir.cinode
 #define	d_needsres      u.dir.needsres
-#define d_needslogpurge u.dir.purgelog
-#define d_needslogtrunc u.dir.trunclog
 #define d_reintupdate   u.dir.rupdate
 #define d_reintstale    u.dir.rstale
 
@@ -61,8 +59,6 @@ struct obj
 	struct dllist_head obj_chain;
 	ViceFid obj_fid;
 	Vnode *obj_vptr;
-	olist obj_sl;   /* list of spooled vmres log records  */
-	olist obj_rsl;  /* list of spooled rvm log records  */
 	union {
 		struct {
 			ViceStoreId	sid;   /* sid of LAST data
@@ -78,8 +74,6 @@ struct obj
 			int inodemod;      /* inode or pages modified */
 			int needsres;      /* does directory need to
 			be resolved at end of reintegration? */
-			int purgelog;      /* should directory log be purged */
-			int trunclog;  	   /* should log be truncated */
 			unsigned rupdate : 1;  /* was directory
 						  updated during
 						  reintegration */
@@ -87,8 +81,6 @@ struct obj
 			client's directory version info stale? */
 		} dir;
 	} obj_u;
-
 };
 
-
-#endif	not _VICE_VLIST_H_
+#endif /* _VICE_OBJLIST_H_ */

@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -77,7 +77,6 @@ extern "C" {
 #include <vice.h>
 #include "cvnode.h"
 #include "volume.h"
-#include <recov_vollog.h>
 #include "signal.h"
 #include "vutil.h"
 #include "recov.h"
@@ -94,8 +93,7 @@ extern "C" {
 /* VolumeId parentId; Should be the same as volumeId if volume is
    readwrite.  Type is the type of the volume we are creating */
 Volume *VCreateVolume(Error *ec, char *partition, VolumeId volumeId, 
-		      VolumeId parentId, VolumeId groupId, int type, 
-		      int rvmlogsize) 
+		      VolumeId parentId, VolumeId groupId, int type)
 {
     VolumeDiskData vol;
     int volindex;
@@ -133,13 +131,6 @@ Volume *VCreateVolume(Error *ec, char *partition, VolumeId volumeId,
     vol.copyDate = time(0);	/* The only date which really means when this
 				   @i(instance) of this volume was created. 
 				   Creation date does not mean this */
-    if (AllowResolution && rvmlogsize) {
-	LogMsg(1, SrvDebugLevel, stdout, "Creating log for volume\n");
-	vol.log = new recov_vol_log(volumeId, rvmlogsize);
-	CODA_ASSERT(vol.log);
-	vol.ResOn = RVMRES;
-    }
-
     /* set up volume header info */
     memset((char *)&tempHeader, 0, sizeof (tempHeader));
     tempHeader.id = vol.id;
@@ -209,8 +200,6 @@ void CopyVolumeHeader(VolumeDiskData *from, VolumeDiskData *to)
     to->destroyMe = DESTROY_ME;	/* Caller must always clear this!!! */
     to->stamp.magic = VOLUMEINFOMAGIC;
     to->stamp.version = VOLUMEINFOVERSION;
-    to->log = NULL;
-    to->ResOn = 0;
 }
 
 void ClearVolumeStats(VolumeDiskData *vol)

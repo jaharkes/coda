@@ -106,7 +106,6 @@ static void dumpestimate(void);
 static void restorefromback(void);
 static void dumpmem(void);
 static void rvmsize(void);
-static void setlogparms(void);
 static void markasancient(void);
 static void timing(void);
 static void tracerpc(void);
@@ -244,8 +243,6 @@ int main(int argc, char **argv)
 	dumpmem();
     else if (strcmp(argv[1], "rvmsize") == 0)
 	rvmsize();
-    else if (strcmp(argv[1], "setlogparms") == 0)
-	setlogparms();
     else if (strcmp(argv[1], "timing") == 0)
 	timing();
     else if (strcmp(argv[1], "tracerpc") == 0)
@@ -288,7 +285,7 @@ bad_options:
 "\tsetvv, showvnode, shutdown, swaplog, setdebug, updatedb, unlock,\n"
 "\tdumpmem, rvmsize, timing, printstats,\n"
 "\tshowcallbacks, truncatervmlog,togglemalloc, getmaxvol, setmaxvol,\n"
-"\tpeek, poke, peeks, pokes, peekx, pokex, setlogparms, tracerpc\n"
+"\tpeek, poke, peeks, pokes, peekx, pokex, tracerpc\n"
 "\tgetvolumelist, dumpvrdb\n");
     exit(-1);
 }
@@ -322,63 +319,6 @@ static void markasancient(void)
 	exit(-1);
     }
     exit(0);	/* Funny, need to exit or the program never exits... */
-}
-
-/**
- * setlogparms - set volume recovery log parameters
- * @volid:	Volume replica id
- * @reson_flag:	Set resolution flag (should normally be set to 4)
- * @logsize_nentries:	Set size of the volume resolution log.
- *
- * Turn on resolution or change the log size for a volume. The volume ID can be
- * either the replicated ID or the non-replicated ID. Resolution is turned on
- * by specifying 4 after reson and can be turned off by specifying 0. The size
- * of the log can also be changed for the volume. The size parameter refers to
- * the number of maximum entries in the log. This should be a multiple of 32.
- * Typically this is set to 8192.
- */
-static void setlogparms(void)
-{
-    long volid;
-    long flag;
-    long nentries;
-    int i;
-
-    nentries = 0;
-    flag =  -1;
-    
-    if (these_args < 5) {
-	fprintf(stderr, "Usage: volutil setlogparms <volid> reson <flag> logsize <nentries>\n");
-	exit(-1);
-    }
-    if (sscanf(this_argp[2], "%lX", &volid) != 1) {
-	fprintf(stderr, "setlogparms: Bad VolumeId %s\n", this_argp[2]);
-	exit(-1);
-    }
-    for (i = 3; i < these_args ; i++) {
-	if (strcmp(this_argp[i], "reson") == 0) {
-	    i = i + 1;
-	    if (sscanf(this_argp[i], "%ld", &flag) != 1) {
-		fprintf(stderr, "Bad flag value %s\n", this_argp[i]);
-		exit(-1);
-	    }
-	}
-	if (strcmp(this_argp[i], "logsize") == 0) {
-	    i = i + 1;
-	    if (sscanf(this_argp[i], "%ld", &nentries) != 1) {
-		fprintf(stderr, "Bad logsize value %s\n", this_argp[i]);
-		exit(-1);
-	    }
-	}
-    }
-    
-    rc = VolSetLogParms(rpcid, volid, flag, nentries);
-    if (rc != RPC2_SUCCESS) {
-	fprintf(stderr, "VolSetLogParms failed with %s\n", RPC2_ErrorMsg((int)rc));
-	exit(-1);
-    }
-    fprintf(stderr, "Set Log parameters\n");
-    exit(0);
 }
 
 /**

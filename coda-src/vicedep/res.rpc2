@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -108,25 +108,9 @@ NewConnection	(IN RPC2_Integer SideEffectType,
 		   IN OUT RPC2_BoundedBS AccessList,
 		   IN OUT SE_Descriptor sed);
 
-
-/* New calls with logs in rvm */
-/* reuse DirResPhase2 and DirResPhase3 */
-14: FetchLogs       (IN ViceFid Fid,
-		 OUT RPC2_Integer logsize,
-		 OUT RPC2_Integer nentries,
-		 IN OUT SE_Descriptor sed);
-		 
-15: ShipLogs    (IN ViceFid Fid,
-		 IN RPC2_Integer size,
-		 IN RPC2_Integer totalentries,
-		 IN OUT ViceStatus vstatus,
-		 IN OUT RPC2_BoundedBS piggyinc,
-		 IN OUT SE_Descriptor sed);
-
-16: HandleInc      (IN ViceFid Fid,
-		 IN ViceStoreId logid,
-		 OUT ViceStatus status,
-		 IN RPC2_BoundedBS pbinc);
+/* 14: FetchLogs */
+/* 15: ShipLogs */
+/* 16: HandleInc */
 
 /* same as DirResPhase3 above */
 17: InstallVV	(IN ViceFid Fid,
@@ -141,11 +125,4 @@ NewConnection	(IN RPC2_Integer SideEffectType,
 19: ClearIncon      (IN ViceFid Fid,
 		 IN ViceVersionVector VV);
 
-20: NewShipLogs    (IN ViceFid Fid,
-		    IN RPC2_Integer size,
-		    IN RPC2_Integer totalentries,
-		    IN OUT ViceStatus vstatus,
-		    IN OUT RPC2_BoundedBS piggyinc,
-		    OUT DirFid HintFid,
-		    IN OUT SE_Descriptor sed);
-
+/* 20: NewShipLogs */

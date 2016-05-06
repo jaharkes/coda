@@ -5,7 +5,7 @@ if BUILD_SERVER
 noinst_LTLIBRARIES += libvicedep.la libvolutildep.la
 endif
 
-noinst_HEADERS = operations.h recov_vollog.h srv.h venusioctl.h voltypes.h
+noinst_HEADERS = operations.h srv.h venusioctl.h voltypes.h
 RPC2_FILES = callback.rpc2 cml.rpc2 mond.rpc2 res.rpc2 vcrcommon.rpc2 \
 	     vice.rpc2 voldump.rpc2 volutil.rpc2
 include $(top_srcdir)/configs/rpc2_rules.mk
