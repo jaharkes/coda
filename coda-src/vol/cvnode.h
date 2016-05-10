@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -123,8 +123,8 @@ typedef struct VnodeDiskObjectStruct {
     Unique_t	  uparent;	/* Parent directory uniquifier */
     bit32	  vnodeMagic;	/* Magic number--mainly for file server
     				   paranoia checks */
-#define	  SMALLVNODEMAGIC	0xda8c041F
-#define	  LARGEVNODEMAGIC	0xad8765fe
+#define	  SMALLVNODEMAGIC	0xda8c0420
+#define	  LARGEVNODEMAGIC	0xad8765ff
     /* Vnode magic can be removed, someday, if we run need the room.  Simply
        have to be sure that the thing we replace can be VNODEMAGIC, rather
        than 0 (in an old file system).  Or go through and zero the fields,
@@ -138,12 +138,14 @@ typedef struct VnodeDiskObjectStruct {
        archiving/migration
        encryption key
      */
+    unsigned char SHA[SHA_DIGEST_LENGTH]; /* SHA1 of file data*/
+
 } VnodeDiskObject;
 
 #if UINT_MAX == ULONG_MAX
-#define SIZEOF_SMALLDISKVNODE	112	/* used to be 64 */
+#define SIZEOF_SMALLDISKVNODE	132	/* used to be 64 */
 #else
-#define SIZEOF_SMALLDISKVNODE	128
+#define SIZEOF_SMALLDISKVNODE	148
 #endif
 #define CHECKSIZE_SMALLVNODE\
 	(sizeof(VnodeDiskObject) == SIZEOF_SMALLDISKVNODE)
@@ -171,11 +173,6 @@ typedef struct Vnode {
     struct	Lock lock;	/* Internal lock */
     PROCESS	writer;		/* Process id having write lock */
 
-    /* SHA160, there is no room in the VnodeDiskObject, but we don't
-       really want to recalculate it for every GetAttr. Eventually this
-       should end up in the VnodeDiskObject. */
-    unsigned char SHA[SHA_DIGEST_LENGTH];
-
     VnodeDiskObject disk;	/* The actual disk data for the vnode */
     /* The VnodeDiskObject needs to be the last one in the Vnode structure,
      * because the ACLs are dangling off the end... */
@@ -194,7 +191,7 @@ typedef struct Vnode {
 #define VAclSize(vnp)		(SIZEOF_LARGEVNODE - SIZEOF_SMALLVNODE)
 #define VAclDiskSize(v)		(SIZEOF_LARGEDISKVNODE - SIZEOF_SMALLDISKVNODE)
 #define VnLog(vnp)		((vnp)->disk.log)
-#define VnSHA(vnp)		((vnp)->SHA)
+#define VnSHA(vnp)		((vnp)->disk.SHA)
 
 PDirHandle SetDirHandle(struct Vnode *);
 extern int VolumeHashOffset();

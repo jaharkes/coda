@@ -83,14 +83,6 @@ trace=100
 #vicetab=db/vicetab
 
 #
-# Whether the server should calculate SHA checksums, this adds CPU usage
-# to GetAttrPlusSHA operations allows clients to use a local lookaside
-# cache to avoid fetches.
-#
-allow_sha=1
-
-
-#
 # The number of threads a server uses to handle the authentication of
 # new connections. This defaults to 5.
 #

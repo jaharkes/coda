@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -422,7 +422,6 @@ static Vnode *VAllocVnodeCommon(Error *ec, Volume *vp, VnodeType type,
 
 	/* Initialize the VM copy of the vnode. */
 	memset(&vnp->disk, 0, sizeof(vnp->disk));
-	memset(&VnSHA(vnp), 0, sizeof(VnSHA(vnp)));
 	vnp->changed = 1;	/* Eventually write this thing out */
 	vnp->delete_me = 0;
 	vnp->vnodeNumber = vnode;
@@ -565,7 +564,6 @@ Vnode *VGetVnode(Error *ec, Volume *vp, VnodeId vnodeNumber,
 		/* Remove it from the old hash chain */
 		moveHash(vnp, newHash);
 		/* Initialize */
-		memset(&VnSHA(vnp), 0, sizeof(VnSHA(vnp)));
 		vnp->changed = (byte)0;
 		vnp->delete_me = (byte)0;
 		vnp->nUsers = 0;

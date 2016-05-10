@@ -3,7 +3,7 @@
                            Coda File System
                               Release 6
 
-          Copyright (c) 1987-2003 Carnegie Mellon University
+          Copyright (c) 1987-2016 Carnegie Mellon University
                   Additional copyrights listed below
 
 This  code  is  distributed "AS IS" without warranty of any kind under
@@ -342,19 +342,11 @@ START_TIMING(GetAttr_Total);
 	MySHA->SeqLen = 0;
 
     /* Only files use SHA checksums */
-    if (!AllowSHA || !MySHA || v->vptr->disk.type != vFile)
+    if (!MySHA || v->vptr->disk.type != vFile)
 	goto SkipSHA;
 
     if (IsZeroSHA(VnSHA(v->vptr)))
-    {
-	int fd = iopen(V_device(volptr), v->vptr->disk.node.inodeNumber, O_RDONLY);
-	SLog(0, "GetAttrPlusSHA: Computing SHA %s, disk.inode=%x", 
-	      FID_(Fid), v->vptr->disk.node.inodeNumber);
-	if (fd == -1) goto FreeLocks;
-
-	ComputeViceSHA(fd, VnSHA(v->vptr));
-	close(fd);
-    }
+	SLog(0, "GetAttrPlusSHA: File %s has no SHA1", FID_(Fid));
 
     if (MySHA->MaxSeqLen >= SHA_DIGEST_LENGTH) {
 	MySHA->SeqLen = SHA_DIGEST_LENGTH;
@@ -3651,6 +3643,8 @@ void PerformStore(ClientEntry *client, VolumeId VSGVolnum, Volume *volptr,
 
     CodaBreakCallBack(client->VenusId, &Fid, VSGVolnum);
 
+    memset(VnSHA(vptr), 0, SHA_DIGEST_LENGTH);
+
     vptr->disk.cloned =	0;		/* installation of shadow copy here effectively does COW! */
     vptr->disk.node.inodeNumber = newinode;
     vptr->disk.length = Length;
@@ -3665,6 +3659,16 @@ void PerformStore(ClientEntry *client, VolumeId VSGVolnum, Volume *volptr,
 	memset((void *)fids, 0, (int)(MAXFIDS * sizeof(ViceFid)));
 	fids[0] = Fid;
 	CopPendingMan->add(new cpent(StoreId, fids));
+    }
+
+    {
+	int fd = iopen(V_device(volptr), vptr->disk.node.inodeNumber, O_RDONLY);
+	if (fd >= 0) {
+            SLog(0, "PerformStore: Computing SHA %s, disk.inode=%x",
+                 FID_(&Fid), vptr->disk.node.inodeNumber);
+            ComputeViceSHA(fd, VnSHA(vptr));
+            close(fd);
+        }
     }
 }
 

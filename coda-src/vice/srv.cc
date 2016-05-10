@@ -135,7 +135,6 @@ int probingon;			// default 0
 int optimizationson;		// default 0
 int Authenticate;		// default 1
 int AllowResolution;		// default 1, controls directory resolution 
-int AllowSHA;			// default 0, whether we calculate SHA checksums
 int check_reintegration_retry;	// default 1
 int comparedirreps;		// default 1 
 int pathtiming;			// default 0 
@@ -1270,7 +1269,6 @@ static int ReadConfigFile(void)
     /* srv.cc defined values ... */
     CODACONF_INT(Authenticate,	  "authenticate", 1); 
     CODACONF_INT(AllowResolution, "resolution",	1); 
-    CODACONF_INT(AllowSHA,	  "allow_sha", 0); 
     CODACONF_INT(comparedirreps,  "comparedirreps", 1); 
     CODACONF_INT(pollandyield,	  "pollandyield", 1); 
     CODACONF_INT(pathtiming,	  "pathtiming",	1);
